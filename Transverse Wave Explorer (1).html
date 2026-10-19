@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Transverse Wave Explorer</title>
+<style>
+:root{--bg:#F1F5F9;--card:#FFF;--panel:#F8FAFC;--line:#CBD5E1;--tx:#0F172A;--mut:#64748B;--acc:#2563EB;--grid:#E2E8F0;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0F172A;--card:#1E293B;--panel:#0F172A;--line:#334155;--tx:#F8FAFC;--mut:#94A3B8;--acc:#38BDF8;--grid:#1E293B}}
+:root[data-theme="dark"]{--bg:#0F172A;--card:#1E293B;--panel:#0F172A;--line:#334155;--tx:#F8FAFC;--mut:#94A3B8;--acc:#38BDF8;--grid:#1E293B}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:14px}
+.app{max-width:960px;margin:0 auto;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+h1{font-size:18px;margin-bottom:2px}.sub{font-size:13px;color:var(--mut);margin-bottom:12px}
+canvas{display:block;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:8px;margin-bottom:10px}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 12px}
+button{background:var(--acc);color:#fff;border:0;border-radius:6px;padding:8px 14px;font-size:14px;font-weight:600;cursor:pointer}
+button.sec{background:transparent;color:var(--tx);border:1px solid var(--line)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:8px}
+.c label{display:flex;justify-content:space-between;font-size:13px;color:var(--mut);margin-bottom:4px}
+.c b{color:var(--acc);font-family:monospace;font-weight:600}
+input[type=range]{width:100%;accent-color:var(--acc)}
+.tog{display:flex;flex-wrap:wrap;gap:16px;margin:12px 0;font-size:13px;color:var(--mut)}
+.tog label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.read{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.r{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.r small{display:block;font-size:11px;color:var(--mut)}.r span{font-family:monospace;font-size:15px}
+.note{font-size:12px;color:var(--mut);margin-top:10px;line-height:1.5}
+.guide{margin-top:18px}.guide h2{font-size:16px;margin-bottom:4px}
+.guide .intro{font-size:13px;color:var(--mut);line-height:1.5;margin-bottom:8px}
+.task{border:1px solid var(--line);border-radius:8px;background:var(--panel);margin:8px 0}
+.task summary{padding:10px 12px;cursor:pointer;font-weight:600;font-size:14px}
+.tb{padding:0 14px 12px;font-size:14px;line-height:1.55}
+.tb h4{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);margin:12px 0 4px}
+.tb ol,.tb ul{padding-left:20px}.tb li{margin-bottom:3px}
+.tb .go{margin:6px 0 2px}
+.ans{margin-top:6px;border-left:3px solid var(--acc);padding:6px 10px;background:var(--card);font-size:13px;line-height:1.5}
+.ans summary{font-weight:600;color:var(--acc);padding:0;cursor:pointer}
+.warn{border-left:3px solid #F59E0B;background:var(--panel);padding:8px 12px;font-size:13px;line-height:1.5;margin:8px 0;border-radius:0 6px 6px 0}
+.ct{font-weight:600;color:var(--acc)}
+</style>
+</head>
+<body>
+<div class="app">
+<h1>Transverse Wave Explorer</h1>
+<div class="sub">One wave, three views: the medium, y–x (snapshot) and y–t (history of one particle).</div>
+<canvas id="cm" height="130"></canvas>
+<canvas id="cs" height="190"></canvas>
+<canvas id="ct" height="190"></canvas>
+<div class="row">
+<button id="pp">Pause</button><button id="st" class="sec">Step +0.05 s</button><button id="rs" class="sec">Reset</button>
+<button id="sl" class="sec">Speed: 1×</button>
+</div>
+<div class="grid">
+<div class="c"><label>Amplitude A <b id="vA"></b></label><input type="range" id="A" min="0.1" max="0.5" step="0.01" value="0.3"></div>
+<div class="c"><label>Wavelength λ <b id="vL"></b></label><input type="range" id="L" min="0.5" max="2" step="0.05" value="1.2"></div>
+<div class="c"><label>Period T <b id="vT"></b></label><input type="range" id="T" min="0.5" max="4" step="0.1" value="2"></div>
+<div class="c"><label>Probe position x₀ <b id="vP"></b></label><input type="range" id="P" min="0" max="4" step="0.05" value="1.5"></div>
+</div>
+<div class="tog">
+<label><input type="checkbox" id="kL" checked>λ</label>
+<label><input type="checkbox" id="kT" checked>T</label>
+<label><input type="checkbox" id="kA" checked>A</label>
+<label><input type="checkbox" id="kV" checked>Velocity vector</label>
+<label><input type="checkbox" id="kD" checked>Wave direction</label>
+</div>
+<div class="read">
+<div class="r"><small>Frequency f = 1/T</small><span id="rf"></span></div>
+<div class="r"><small>Wave speed v = fλ</small><span id="rv"></span></div>
+<div class="r"><small>Probe y</small><span id="ry"></span></div>
+<div class="r"><small>Probe velocity v<sub>y</sub></small><span id="rvy"></span></div>
+<div class="r"><small>Max particle speed</small><span id="rm"></span></div>
+<div class="r"><small>Clock t</small><span id="rt"></span></div>
+</div>
+<div class="guide">
+<h2>Guided investigation: the displacement–distance (y–x) graph</h2>
+<div class="intro">Work through the tasks in order. Press <b>Set up this task</b> to load the starting values, then follow the protocol. Write your own answer first, then open “Check your answer”.</div>
+<div class="warn"><b>Observation protocol (use every time)</b><ol style="padding-left:20px;margin-top:4px">
+<li><b>Check the axes first.</b> The y–x graph has distance on the horizontal axis; the y–t graph has time. They look alike but answer different questions.</li>
+<li><b>Pause before you measure.</b> A y–x graph is a snapshot of the whole wave at one instant.</li>
+<li><b>Read from the graph, then confirm with the readout.</b> Use the gridlines and tick marks; do not just copy the numbers.</li>
+<li><b>Change one variable at a time</b> and predict the result before you test it.</li>
+<li><b>Link the three views.</b> Find the red particle in the medium, on the y–x graph and on the y–t graph.</li></ol></div>
+
+<details class="task"><summary>Task 1: What does the graph show? (reading A and λ)</summary><div class="tb">
+<button class="go" data-s="0.3,1.2,2,1.5,1">Set up this task</button>
+<h4>Protocol</h4><ol>
+<li>The wave is paused at t = 0. Look at the green y–x graph and the particles in the medium panel above it. Match the shape of the line to the positions of the particles.</li>
+<li>Move the probe slider slowly. Watch the red dot on the graph and the red particle in the medium.</li>
+<li>Use the gridlines (0.2 m steps vertically, 0.5 m ticks horizontally) to read values.</li></ol>
+<h4>Guiding questions</h4><ol>
+<li><span class="ct">State</span> what each point on the y–x graph represents.</li>
+<li><span class="ct">Determine</span> the amplitude from the graph. Which feature do you measure from, and to?</li>
+<li><span class="ct">Determine</span> the wavelength from the graph. Why is measuring from one crest to the next better than from the start to the end of the graph?</li>
+<li>What is the displacement at x = 0 when t = 0? What does that tell you about where the wave “starts”?</li></ol>
+<details class="ans"><summary>Check your answer</summary>
+<p>1. The displacement y of the particle at that distance x from the source, at this one instant.<br>2. A ≈ 0.30 m: the maximum displacement, measured from the equilibrium line (y = 0) to a crest or trough, not crest to trough.<br>3. λ ≈ 1.2 m (crests near 0.3 m and 1.5 m). Measuring between identical points of adjacent cycles is accurate; the graph width does not have to be a whole number of wavelengths.<br>4. y = 0 at x = 0, t = 0 because the wave has sin form here. The graph shape depends on the choice of t = 0; it is not a property of the wave.</p></details></div></details>
+
+<details class="task"><summary>Task 2: A snapshot of a moving wave (graph shift and wave speed)</summary><div class="tb">
+<button class="go" data-s="0.3,1.2,2,1.5,1">Set up this task</button>
+<h4>Protocol</h4><ol>
+<li>At t = 0, note the x-position of the first crest on the y–x graph: x₁ = ____ m.</li>
+<li>Press <b>Step</b> ten times (0.5 s). Note the clock t and the new crest position x₂ = ____ m.</li>
+<li>Calculate Δx/Δt. Compare with the readout v = fλ.</li>
+<li>While the wave is playing, watch only the red particle in the medium. Does it travel along with the crest?</li></ol>
+<h4>Guiding questions</h4><ol>
+<li><span class="ct">Describe</span> how the shape of the y–x graph changes between the two snapshots.</li>
+<li><span class="ct">Calculate</span> the speed of the crest. Does it equal fλ?</li>
+<li>In which direction does the crest move? In which direction does the red particle move? <span class="ct">Explain</span> why a transverse wave is not “matter flowing to the right”.</li>
+<li>Which graph, y–x or y–t, would you use to find λ? To find T?</li></ol>
+<details class="ans"><summary>Check your answer</summary>
+<p>1. The same shape slides to the right without changing size.<br>2. Crest moves from ≈ 0.3 m to ≈ 0.6 m in 0.5 s: v ≈ 0.6 m/s, matching fλ = (1/2)(1.2).<br>3. The crest moves in +x; the particle moves only up and down (perpendicular). The wave transfers energy, not matter.<br>4. λ from y–x (distance axis), T from y–t (time axis).</p></details></div></details>
+
+<details class="task"><summary>Task 3: Predicting particle motion from the graph</summary><div class="tb">
+<button class="go" data-s="0.3,1.2,2,0.15,1">Set up this task (probe at 0.15 m)</button>
+<h4>Protocol</h4><ol>
+<li>The wave travels to the right. Imagine the whole green curve sliding a tiny distance to the right. Look at the curve just to the <b>left</b> of the red dot.</li>
+<li>Predict: will the red particle move up or down next? Write your prediction.</li>
+<li>Press <b>Step</b> once and check. Repeat with the probe at x = 0.45 m (use the probe slider, then press Reset).</li></ol>
+<h4>Guiding questions</h4><ol>
+<li><span class="ct">Predict</span> the direction of motion of the particle at x = 0.15 m, then at x = 0.45 m.</li>
+<li><span class="ct">Explain</span> your prediction using the shape of the graph to the left of the particle.</li>
+<li>What would change if the wave travelled to the left?</li></ol>
+<details class="ans"><summary>Check your answer</summary>
+<p>1. At 0.15 m the particle moves down; at 0.45 m it moves up.<br>2. The wave moves right, so the particle soon takes the displacement that the point just to its left has now. At 0.15 m the curve to the left is lower; at 0.45 m (just past the crest) it is higher.<br>3. You would look to the right of the particle instead, so both predictions reverse.</p></details></div></details>
+
+<details class="task"><summary>Task 4: Where is a particle fastest, and where is it momentarily at rest?</summary><div class="tb">
+<button class="go" data-s="0.3,1.2,2,0.3,1">Set up this task (probe at a crest)</button>
+<h4>Protocol</h4><ol>
+<li>With the probe at the crest (x = 0.3 m), read y and vᵧ from the readouts. Note the length of the blue velocity arrow.</li>
+<li>Move the probe to x = 0.6 m (on the equilibrium line). Read y, vᵧ and the arrow again.</li>
+<li>Try x = 0.9 m (trough). Compare with the “Max particle speed” readout.</li></ol>
+<h4>Guiding questions</h4><ol>
+<li><span class="ct">Compare</span> the speed of the particle at a crest, at y = 0 and at a trough.</li>
+<li>How does the <i>steepness</i> of the y–x graph at the probe relate to the particle’s speed?</li>
+<li>Is the particle’s velocity the same thing as the wave speed? <span class="ct">Justify</span>.</li></ol>
+<details class="ans"><summary>Check your answer</summary>
+<p>1. At crest and trough vᵧ = 0 (momentary rest, y = ±A). At y = 0, speed is maximum: ωA = 2πA/T ≈ 0.94 m/s.<br>2. The steeper the curve at the particle, the faster it moves; the graph is flat at a crest and steepest at y = 0.<br>3. No. Particle speed varies with time, is perpendicular to the travel direction and depends on A and T; the wave speed is constant (0.6 m/s here) and depends on λ and T.</p></details></div></details>
+
+<details class="task"><summary>Task 5: What changes the y–x graph? (A, λ and T)</summary><div class="tb">
+<button class="go" data-s="0.3,1.2,2,1.5,1">Set up this task</button>
+<h4>Protocol</h4><ol>
+<li>Pause at t = 0. <b>Predict first</b>, then change only <b>one</b> slider: A, then λ, then T. Press Reset after each change.</li>
+<li>For each, record what happened to the y–x graph: height, spacing, or nothing.</li>
+<li>Record λ and T, calculate v = λ/T and compare with the readout. Try two different pairs.</li></ol>
+<h4>Guiding questions</h4><ol>
+<li><span class="ct">State</span> which feature of the y–x graph each variable controls.</li>
+<li>When you change T, the paused y–x graph looks identical. <span class="ct">Explain</span> why T still matters.</li>
+<li>Halve T keeping λ fixed. <span class="ct">Predict</span> what happens to f and v.</li></ol>
+<details class="ans"><summary>Check your answer</summary>
+<p>1. A sets the height, λ sets the horizontal spacing of crests; T does not change the snapshot.<br>2. T controls how quickly the pattern moves and how quickly each particle oscillates (visible in the y–t graph and the speed readout).<br>3. f doubles and v doubles (v = fλ with λ fixed).</p></details></div></details>
+
+<details class="task"><summary>Task 6 (extension): Phase difference between two particles</summary><div class="tb">
+<button class="go" data-s="0.3,1.2,2,0.3,1">Set up this task (probe at 0.3 m)</button>
+<h4>Protocol</h4><ol>
+<li>Place the probe at x = 0.3 m. Play and watch its up-and-down motion on the y–t graph, then pause. Note y and vᵧ.</li>
+<li>Repeat with the probe at x = 0.9 m, then x = 1.5 m, starting from the same clock time each time (Reset, then Play for the same number of seconds, or Step the same number of times).</li>
+<li>Compare the three y–t graphs.</li></ol>
+<h4>Guiding questions</h4><ol>
+<li><span class="ct">Identify</span> which pairs of particles move in step and which move oppositely.</li>
+<li>How is the distance between particles related to the phase difference? Complete: “particles λ apart are ____; particles λ/2 apart are ____.”</li>
+<li>Use the y–x graph to <span class="ct">justify</span> your answer to question 2.</li></ol>
+<details class="ans"><summary>Check your answer</summary>
+<p>1. x = 0.3 m and 1.5 m (λ apart) move in step; x = 0.3 m and 0.9 m (λ/2 apart) move oppositely.<br>2. λ apart: in phase (phase difference 2π); λ/2 apart: in antiphase (phase difference π).<br>3. On the y–x graph, points one wavelength apart have identical displacement and slope; points half a wavelength apart have equal and opposite displacement.</p></details></div></details>
+
+<div class="warn"><b>Common misconceptions to watch for</b><ul style="padding-left:20px;margin-top:4px">
+<li>“The graph shows the path of the wave.” It does not: it shows displacement of many particles at one instant.</li>
+<li>“Particles move along with the wave.” They oscillate about a fixed position.</li>
+<li>“Amplitude is crest to trough.” It is the maximum displacement from equilibrium.</li>
+<li>“A changes the wavelength.” It changes only the height.</li></ul></div>
+</div>
+<div class="note">Notice: the wave moves right at v = fλ, but each particle only moves up and down. Particle speed is greatest as it passes the equilibrium line (y = 0) and zero at the peaks. The probe's y–t graph has the same shape as the y–x graph, but its horizontal axis measures T instead of λ.</div>
+</div>
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const cv={m:$('cm'),s:$('cs'),t:$('ct')},cx={m:cv.m.getContext('2d'),s:cv.s.getContext('2d'),t:cv.t.getContext('2d')};
+const XL=4,WIN=8,M=46,YR=0.6; // domain 0-4 m, window 8 s, margin, y half-range (m)
+let A=.3,L=1.2,T=2,P=1.5,run=true,th=0,t=0,last=null,hist=[],spd=1;
+let W=800;const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function size(){W=cv.m.parentElement.clientWidth-34;const d=devicePixelRatio||1;
+ for(const k in cv){const c=cv[k],h=+c.getAttribute('height');c.width=W*d;c.height=h*d;c.style.height=h+'px';cx[k].setTransform(d,0,0,d,0,0)}}
+let lastW=0,pend=false;
+function fit(){const w=document.querySelector('.app').clientWidth;if(w===lastW)return;lastW=w;size();if(typeof draw==='function')draw()}
+size();lastW=document.querySelector('.app').clientWidth;
+if(window.ResizeObserver){new ResizeObserver(()=>{if(pend)return;pend=true;requestAnimationFrame(()=>{pend=false;fit()})}).observe(document.querySelector('.app'))}
+window.addEventListener('resize',()=>requestAnimationFrame(fit));
+const k=()=>2*Math.PI/L,w=()=>2*Math.PI/T;
+const yAt=x=>A*Math.sin(k()*x-th), vAt=x=>-w()*A*Math.cos(k()*x-th); // th = accumulated phase = ∫ω dt
+const X=x=>M+x/XL*(W-2*M);
+function lab(c,s,x,y,col,al){c.fillStyle=col;c.font='12px -apple-system,sans-serif';c.textAlign=al||'left';c.fillText(s,x,y)}
+function dimH(c,x1,x2,y,s,col){c.strokeStyle=col;c.lineWidth=1.5;c.beginPath();c.moveTo(x1,y);c.lineTo(x2,y);c.moveTo(x1,y-5);c.lineTo(x1,y+5);c.moveTo(x2,y-5);c.lineTo(x2,y+5);c.stroke();lab(c,s,(x1+x2)/2,y-7,col,'center')}
+function arrow(c,x1,y1,x2,y2,col){const a=Math.atan2(y2-y1,x2-x1);c.strokeStyle=col;c.fillStyle=col;c.lineWidth=2.5;c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);c.stroke();
+ c.beginPath();c.moveTo(x2,y2);c.lineTo(x2-8*Math.cos(a-.45),y2-8*Math.sin(a-.45));c.lineTo(x2-8*Math.cos(a+.45),y2-8*Math.sin(a+.45));c.closePath();c.fill()}
+function frame(c,h,title,col,xlab,ticks){const g=css('--grid'),m=css('--mut'),mid=h/2,sy=(h/2-24)/YR;
+ c.clearRect(0,0,W,h);lab(c,title,M,16,col);
+ c.strokeStyle=g;c.lineWidth=1;c.font='11px sans-serif';
+ for(let v=-0.4;v<=0.41;v+=0.2){const y=mid-v*sy;c.beginPath();c.moveTo(M,y);c.lineTo(W-M,y);c.stroke();lab(c,v.toFixed(1),M-6,y+4,m,'right')}
+ for(const[tx,tl]of ticks){c.strokeStyle=g;c.beginPath();c.moveTo(tx,24);c.lineTo(tx,h-18);c.stroke();lab(c,tl,tx,h-4,m,'center')}
+ c.strokeStyle=css('--mut');c.beginPath();c.moveTo(M,mid);c.lineTo(W-M,mid);c.stroke();
+ lab(c,xlab,W-M,mid-6,m,'right');lab(c,'y (m)',M+4,28,m);return{mid,sy}}
+function draw(){
+ const acc=css('--acc'),mut=css('--mut'),tx=css('--tx');
+ // 1 medium
+ let c=cx.m,h=130,mid=h/2,sy=(h/2-24)/YR;c.clearRect(0,0,W,h);lab(c,'MEDIUM — particles move only up and down',M,16,mut);
+ c.setLineDash([4,4]);c.strokeStyle=css('--line');c.beginPath();c.moveTo(M,mid);c.lineTo(W-M,mid);c.stroke();c.setLineDash([]);
+ const N=61,pts=[];for(let i=0;i<N;i++){const x=i/(N-1)*XL;pts.push([X(x),mid-yAt(x)*sy])}
+ c.strokeStyle=css('--line');c.lineWidth=1.5;c.beginPath();pts.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));c.stroke();
+ c.fillStyle=mut;pts.forEach(p=>{c.beginPath();c.arc(p[0],p[1],3.5,0,7);c.fill()});
+ const py=mid-yAt(P)*sy;c.fillStyle='#EF4444';c.beginPath();c.arc(X(P),py,7,0,7);c.fill();
+ if($('kV').checked){const vy=vAt(P),len=vy*sy*0.25;arrow(c,X(P),py,X(P),py-len,acc);lab(c,'v\u1D67',X(P)+10,py-len/2,acc)}
+ if($('kD').checked){arrow(c,W-M-60,h-18,W-M,h-18,mut);lab(c,'wave travels',W-M-66,h-14,mut,'right')}
+ // 2 spatial
+ const tk=[];for(let x=0;x<=XL;x+=0.5)tk.push([X(x),x+(x==XL?' m':'')]);
+ let f=frame(cx.s,190,'y–x GRAPH — snapshot at this instant','#10B981','x (m)',tk);c=cx.s;
+ c.strokeStyle='#10B981';c.lineWidth=2.5;c.beginPath();for(let i=0;i<=300;i++){const x=i/300*XL;const p=[X(x),f.mid-yAt(x)*f.sy];i?c.lineTo(...p):c.moveTo(...p)}c.stroke();
+ c.setLineDash([3,3]);c.strokeStyle='#EF4444';c.beginPath();c.moveTo(X(P),f.mid);c.lineTo(X(P),f.mid-yAt(P)*f.sy);c.stroke();c.setLineDash([]);
+ c.fillStyle='#EF4444';c.beginPath();c.arc(X(P),f.mid-yAt(P)*f.sy,6,0,7);c.fill();
+ if($('kL').checked&&0.2+L<=XL)dimH(c,X(0.2),X(0.2+L),170-4,'λ = '+L.toFixed(2)+' m','#F59E0B');
+ if($('kA').checked){const ax=M+22;c.strokeStyle='#EC4899';c.beginPath();c.moveTo(ax,f.mid);c.lineTo(ax,f.mid-A*f.sy);c.stroke();lab(c,'A = '+A.toFixed(2)+' m',ax+6,f.mid-A*f.sy/2+4,'#EC4899')}
+ // 3 temporal
+ const t0=t-WIN,tt=[];for(let s=Math.ceil(t0);s<=t;s++)tt.push([M+(s-t0)/WIN*(W-2*M),s+' s']);
+ f=frame(cx.t,190,'y–t GRAPH — history of the red particle at x = '+P.toFixed(2)+' m','#0EA5E9','t (s)',tt);c=cx.t;
+ const TX=s=>M+(s-t0)/WIN*(W-2*M);
+ if(hist.length>1){c.strokeStyle='#0EA5E9';c.lineWidth=2.5;c.beginPath();hist.forEach((p,i)=>{const q=[TX(p[0]),f.mid-p[1]*f.sy];i?c.lineTo(...q):c.moveTo(...q)});c.stroke();
+  const e=hist[hist.length-1];c.fillStyle='#EF4444';c.beginPath();c.arc(TX(e[0]),f.mid-e[1]*f.sy,6,0,7);c.fill();
+  if($('kT').checked&&T<t-hist[0][0])dimH(c,TX(e[0]-T),TX(e[0]),170-4,'T = '+T.toFixed(1)+' s','#8B5CF6')}
+ if($('kA').checked){const ax=M+22;c.strokeStyle='#EC4899';c.beginPath();c.moveTo(ax,f.mid);c.lineTo(ax,f.mid-A*f.sy);c.stroke();lab(c,'A = '+A.toFixed(2)+' m',ax+6,f.mid-A*f.sy/2+4,'#EC4899')}
+ // readouts
+ $('rf').textContent=(1/T).toFixed(2)+' Hz';$('rv').textContent=(L/T).toFixed(2)+' m/s';
+ $('ry').textContent=yAt(P).toFixed(2)+' m';$('rvy').textContent=vAt(P).toFixed(2)+' m/s';
+ $('rm').textContent=(w()*A).toFixed(2)+' m/s';$('rt').textContent=t.toFixed(2)+' s'}
+function rec(){hist.push([t,yAt(P)]);while(hist.length&&hist[0][0]<t-WIN)hist.shift()}
+function adv(dt){t+=dt;th+=w()*dt;rec()}
+function tick(ts){if(last===null)last=ts;const dt=Math.min((ts-last)/1000,.1);last=ts;if(run)adv(dt*spd);draw();requestAnimationFrame(tick)}
+const bind=(id,v,fmt,set)=>$(id).addEventListener('input',e=>{set(+e.target.value);$(v).textContent=fmt();if(id==='P'){hist=[];rec()}if(!run)draw()});
+const upd=()=>{$('vA').textContent=A.toFixed(2)+' m';$('vL').textContent=L.toFixed(2)+' m';$('vT').textContent=T.toFixed(1)+' s';$('vP').textContent=P.toFixed(2)+' m'};
+bind('A','vA',()=>A.toFixed(2)+' m',v=>A=v);bind('L','vL',()=>L.toFixed(2)+' m',v=>L=v);
+bind('T','vT',()=>T.toFixed(1)+' s',v=>T=v);bind('P','vP',()=>P.toFixed(2)+' m',v=>P=v);upd();
+$('pp').onclick=()=>{run=!run;$('pp').textContent=run?'Pause':'Play'};
+$('st').onclick=()=>{run=false;$('pp').textContent='Play';adv(.05);draw()};
+$('rs').onclick=()=>{t=0;th=0;hist=[];rec();draw()};
+$('sl').onclick=()=>{spd=spd===1?.25:spd===.25?.5:1;$('sl').textContent='Speed: '+spd+'×'};
+document.querySelectorAll('.tog input').forEach(i=>i.onchange=()=>{if(!run)draw()});
+const setv=(id,v)=>{const e=$(id);e.value=v;e.dispatchEvent(new Event('input'))};
+document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{const[a,l,tt,p]=b.dataset.s.split(',').map(Number);
+ setv('A',a);setv('L',l);setv('T',tt);setv('P',p);$('rs').click();if(run)$('pp').click();window.scrollTo({top:0,behavior:'smooth'})});
+rec();requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
